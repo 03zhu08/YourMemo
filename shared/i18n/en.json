@@ -1,0 +1,50 @@
+{
+  "app": { "name": "YourMemo" },
+  "sidebar": {
+    "projects": "Projects",
+    "dashboard": "Dashboard",
+    "addProject": "New Project",
+    "settings": "Settings"
+  },
+  "task": {
+    "add": "Add Task",
+    "title": "Task Title",
+    "description": "Description",
+    "status": { "backlog": "Backlog", "todo": "To Do", "in_progress": "In Progress", "done": "Done", "cancelled": "Cancelled" },
+    "priority": { "low": "Low", "medium": "Medium", "high": "High", "urgent": "Urgent" },
+    "dueDate": "Due Date",
+    "startDate": "Start Date",
+    "noTasks": "No tasks yet. Create one to get started!",
+    "links": "Links",
+    "addDescription": "+ Add description...",
+    "addLinks": "+ Add links...",
+    "copyCitation": "Copy as Markdown"
+  },
+  "project": {
+    "name": "Project Name",
+    "description": "Description",
+    "deadline": "Deadline",
+    "create": "Create Project",
+    "empty": "No projects yet. Create your first project!",
+    "confirmDelete": "Delete project \"{name}\"? All tasks will be permanently removed."
+  },
+  "dashboard": {
+    "calendar": "Calendar",
+    "timeline": "Timeline",
+    "todayTasks": "Today's Tasks",
+    "overdue": "Overdue",
+    "allClear": "All clear for today",
+    "weekOf": "Week of"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search...",
+    "color": "Color",
+    "add": "Add"
+  },
+  "theme": { "light": "Light", "dark": "Dark", "accentColor": "Accent Color" },
+  "lang": { "en": "English", "zh": "中文" }
+}

@@ -1,11 +1,30 @@
 /tmp
 /out-tsc
-
-/node_modules
+/dist
+/release
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-/.pnp
+.pnp
 .pnp.js
-
 .vscode/*
+.DS_Store
+
+# Python
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.pyc
+backend/venv/
+backend/.venv/
+*.db
+
+# IDE
+.idea/
+
+# Mobile
+mobile/ios/build/
+mobile/ios/Pods/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/build/
