@@ -1,0 +1,30 @@
+{
+  "app": { "name": "YourMemo" },
+  "sidebar": {
+    "projects": "Projects",
+    "addProject": "New Project",
+    "settings": "Settings"
+  },
+  "task": {
+    "add": "Add Task",
+    "title": "Task Title",
+    "status": { "todo": "To Do", "in_progress": "In Progress", "done": "Done", "cancelled": "Cancelled" },
+    "priority": { "0": "None", "1": "Low", "2": "Medium", "3": "High" },
+    "dueDate": "Due Date",
+    "noTasks": "No tasks yet. Create one to get started!"
+  },
+  "project": {
+    "name": "Project Name",
+    "create": "Create Project",
+    "empty": "No projects yet. Create your first project!"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search..."
+  },
+  "theme": { "light": "Light", "dark": "Dark" },
+  "lang": { "en": "English", "zh": "中文" }
+}

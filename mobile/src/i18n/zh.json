@@ -1,0 +1,30 @@
+{
+  "app": { "name": "YourMemo" },
+  "sidebar": {
+    "projects": "项目",
+    "addProject": "新建项目",
+    "settings": "设置"
+  },
+  "task": {
+    "add": "添加任务",
+    "title": "任务标题",
+    "status": { "todo": "待办", "in_progress": "进行中", "done": "已完成", "cancelled": "已取消" },
+    "priority": { "0": "无", "1": "低", "2": "中", "3": "高" },
+    "dueDate": "截止日期",
+    "noTasks": "暂无任务，创建一个开始吧！"
+  },
+  "project": {
+    "name": "项目名称",
+    "create": "创建项目",
+    "empty": "暂无项目，创建你的第一个项目吧！"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "search": "搜索..."
+  },
+  "theme": { "light": "浅色", "dark": "深色" },
+  "lang": { "en": "English", "zh": "中文" }
+}

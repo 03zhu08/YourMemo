@@ -1,14 +1,38 @@
 {
-  "name": "YourMemo",
-  "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "name": "yourmemo",
+  "version": "0.1.0",
+  "description": "Professional personal productivity & project management tool",
+  "main": "dist/main/index.js",
+  "private": true,
   "scripts": {
-    "build": "tsc"
+    "dev:renderer": "vite --config vite.config.ts",
+    "dev:electron": "tsc -p tsconfig.node.json && electron dist/main/index.js",
+    "dev:backend": "cd backend && source .venv/bin/activate && python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 18230",
+    "dev": "./scripts/dev.sh",
+    "build:renderer": "vite build --config vite.config.ts",
+    "build:electron": "tsc -p tsconfig.node.json",
+    "build": "npm run build:renderer && npm run build:electron",
+    "pack": "npm run build && electron-builder"
   },
-  "dependencies": {},
+  "dependencies": {
+    "i18next": "^24.2.0",
+    "lucide-react": "^1.9.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-i18next": "^15.4.0",
+    "react-router-dom": "^7.1.0",
+    "zustand": "^5.0.0"
+  },
   "devDependencies": {
-    "typescript": "^5.5.3"
-  },
-  "private": true
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^9.1.0",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.1.0"
+  }
 }

@@ -1,0 +1,48 @@
+{
+  "app": { "name": "YourMemo" },
+  "sidebar": {
+    "projects": "项目",
+    "dashboard": "仪表盘",
+    "addProject": "新建项目",
+    "settings": "设置"
+  },
+  "task": {
+    "add": "添加任务",
+    "title": "任务标题",
+    "description": "描述",
+    "status": { "backlog": "待办池", "todo": "待办", "in_progress": "进行中", "done": "已完成", "cancelled": "已取消" },
+    "priority": { "low": "低", "medium": "中", "high": "高", "urgent": "紧急" },
+    "dueDate": "截止日期",
+    "noTasks": "暂无任务，创建一个开始吧！",
+    "links": "链接",
+    "addDescription": "+ 添加描述...",
+    "addLinks": "+ 添加链接...",
+    "copyCitation": "复制 Markdown 引用"
+  },
+  "project": {
+    "name": "项目名称",
+    "description": "描述",
+    "deadline": "截止日期",
+    "create": "创建项目",
+    "empty": "暂无项目，创建你的第一个项目吧！"
+  },
+  "dashboard": {
+    "calendar": "日历",
+    "timeline": "时间线",
+    "todayTasks": "今日待办",
+    "overdue": "已逾期",
+    "allClear": "今天没有待办任务",
+    "weekOf": "本周"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "search": "搜索...",
+    "color": "颜色",
+    "add": "添加"
+  },
+  "theme": { "light": "浅色", "dark": "深色", "accentColor": "主题色" },
+  "lang": { "en": "English", "zh": "中文" }
+}

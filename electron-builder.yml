@@ -1,0 +1,22 @@
+appId: com.yourmemo.app
+productName: YourMemo
+directories:
+  output: release
+files:
+  - dist/**/*
+extraResources:
+  - from: backend
+    to: backend
+    filter:
+      - "**/*"
+      - "!.venv/**"
+      - "!venv/**"
+      - "!__pycache__/**"
+      - "!**/__pycache__/**"
+      - "!*.pyc"
+      - "!*.db"
+mac:
+  target: dmg
+  identity: null
+win:
+  target: nsis
