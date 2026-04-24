@@ -18,6 +18,7 @@ export default function CreateTaskModal({ open, onClose, projectId }: Props) {
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('low');
   const [dueDate, setDueDate] = useState('');
+  const [startDate, setStartDate] = useState('');
   const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -33,9 +34,10 @@ export default function CreateTaskModal({ open, onClose, projectId }: Props) {
         description: description.trim() || undefined,
         priority: priority !== 'low' ? priority : undefined,
         due_date: dueDate || null,
+        start_date: startDate || null,
         links: links.filter(l => l.label && l.url),
       });
-      setTitle(''); setDescription(''); setPriority('low'); setDueDate(''); setLinks([]);
+      setTitle(''); setDescription(''); setPriority('low'); setDueDate(''); setStartDate(''); setLinks([]);
       onClose();
     } finally {
       setLoading(false);
@@ -90,9 +92,17 @@ export default function CreateTaskModal({ open, onClose, projectId }: Props) {
             </select>
           </div>
           <div className="flex-1">
+            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{t('task.startDate')}</label>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+              onClick={(e) => (e.target as HTMLInputElement).showPicker()}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+              style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
+          </div>
+          <div className="flex-1">
             <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{t('task.dueDate')}</label>
             <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
+              onClick={(e) => (e.target as HTMLInputElement).showPicker()}
+              className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
               style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
           </div>
         </div>

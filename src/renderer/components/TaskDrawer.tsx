@@ -24,6 +24,7 @@ export default function TaskDrawer({ task, onClose }: Props) {
   const [status, setStatus] = useState<TaskStatus>('todo');
   const [priority, setPriority] = useState<TaskPriority>('low');
   const [dueDate, setDueDate] = useState('');
+  const [startDate, setStartDate] = useState('');
   const [links, setLinks] = useState<{ label: string; url: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [showDesc, setShowDesc] = useState(false);
@@ -37,6 +38,7 @@ export default function TaskDrawer({ task, onClose }: Props) {
     setStatus(task.status);
     setPriority(task.priority);
     setDueDate(task.due_date?.slice(0, 10) || '');
+    setStartDate(task.start_date?.slice(0, 10) || '');
     setLinks(task.links?.map(l => ({ label: l.label, url: l.url })) || []);
     setShowDesc(!!task.description);
     setShowLinks((task.links?.length || 0) > 0);
@@ -54,6 +56,7 @@ export default function TaskDrawer({ task, onClose }: Props) {
         status,
         priority,
         due_date: dueDate || null,
+        start_date: startDate || null,
         links: links.filter(l => l.label && l.url),
       });
       onClose();
@@ -129,11 +132,21 @@ export default function TaskDrawer({ task, onClose }: Props) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{t('task.dueDate')}</label>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg text-sm outline-none"
-              style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{t('task.startDate')}</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                onClick={(e) => (e.target as HTMLInputElement).showPicker()}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>{t('task.dueDate')}</label>
+              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
+                onClick={(e) => (e.target as HTMLInputElement).showPicker()}
+                className="w-full px-3 py-2 rounded-lg text-sm outline-none cursor-pointer"
+                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }} />
+            </div>
           </div>
 
           <div>

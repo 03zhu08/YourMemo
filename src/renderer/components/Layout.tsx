@@ -4,13 +4,14 @@ import i18nInstance from '../i18n';
 import { useAppStore } from '../stores/useAppStore';
 import CreateProjectModal from './CreateProjectModal';
 import TaskBoard from '../pages/TaskBoard';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const { projects, allTasks, activeProjectId, theme, locale, primaryColor, fetchProjects, fetchAllTasks, setActiveProject, setTheme, setLocale, setPrimaryColor } = useAppStore();
+  const { projects, allTasks, activeProjectId, theme, locale, primaryColor, fetchProjects, fetchAllTasks, setActiveProject, setTheme, setLocale, setPrimaryColor, deleteProject } = useAppStore();
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [customHex, setCustomHex] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   useEffect(() => { fetchProjects(); fetchAllTasks(); }, []);
 
@@ -103,18 +104,26 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </button>
 
             {projects.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setActiveProject(p.id)}
-                className="w-full text-left px-3 py-2 rounded text-sm cursor-pointer transition-colors"
-                style={{
-                  background: activeProjectId === p.id ? 'var(--accent)' : 'transparent',
-                  color: activeProjectId === p.id ? '#fff' : 'var(--text-primary)',
-                }}
-              >
-                <span className="inline-block w-2 h-2 rounded-full mr-2" style={{ background: p.color }} />
-                {p.name}
-              </button>
+              <div key={p.id} className="group flex items-center mb-0.5">
+                <button
+                  onClick={() => setActiveProject(p.id)}
+                  className="flex-1 text-left px-3 py-2 rounded text-sm cursor-pointer transition-colors truncate"
+                  style={{
+                    background: activeProjectId === p.id ? 'var(--accent)' : 'transparent',
+                    color: activeProjectId === p.id ? '#fff' : 'var(--text-primary)',
+                  }}
+                >
+                  <span className="inline-block w-2 h-2 rounded-full mr-2" style={{ background: p.color }} />
+                  {p.name}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(p.id); }}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 cursor-pointer p-1 rounded transition-opacity shrink-0"
+                  style={{ color: 'var(--danger)' }}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
             ))}
           </nav>
 
@@ -154,6 +163,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <TaskBoard projectId={activeProjectId} onClose={() => setActiveProject(null)} />
       <CreateProjectModal open={showProjectModal} onClose={() => setShowProjectModal(false)} />
+
+      {confirmDelete && (() => {
+        const proj = projects.find(p => p.id === confirmDelete);
+        return (
+          <>
+            <div className="fixed inset-0 z-50 animate-fadeIn" style={{ background: 'rgba(0,0,0,0.4)' }} onClick={() => setConfirmDelete(null)} />
+            <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+              <div className="pointer-events-auto w-80 rounded-xl p-5 shadow-xl animate-scaleIn"
+                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-primary)' }}>
+                  {t('project.confirmDelete', { name: proj?.name || '' })}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => setConfirmDelete(null)} className="px-3 py-1.5 rounded text-sm cursor-pointer"
+                    style={{ color: 'var(--text-secondary)', background: 'var(--bg-primary)' }}>{t('common.cancel')}</button>
+                  <button onClick={async () => { await deleteProject(confirmDelete); setConfirmDelete(null); }}
+                    className="px-3 py-1.5 rounded text-sm text-white cursor-pointer"
+                    style={{ background: 'var(--danger)' }}>{t('common.delete')}</button>
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

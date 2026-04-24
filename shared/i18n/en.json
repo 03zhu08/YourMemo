@@ -13,6 +13,7 @@
     "status": { "backlog": "Backlog", "todo": "To Do", "in_progress": "In Progress", "done": "Done", "cancelled": "Cancelled" },
     "priority": { "low": "Low", "medium": "Medium", "high": "High", "urgent": "Urgent" },
     "dueDate": "Due Date",
+    "startDate": "Start Date",
     "noTasks": "No tasks yet. Create one to get started!",
     "links": "Links",
     "addDescription": "+ Add description...",
@@ -24,7 +25,8 @@
     "description": "Description",
     "deadline": "Deadline",
     "create": "Create Project",
-    "empty": "No projects yet. Create your first project!"
+    "empty": "No projects yet. Create your first project!",
+    "confirmDelete": "Delete project \"{name}\"? All tasks will be permanently removed."
   },
   "dashboard": {
     "calendar": "Calendar",

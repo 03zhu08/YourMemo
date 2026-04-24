@@ -69,6 +69,13 @@ async def run_migrations():
             """)
             await db.commit()
 
+    # Migration 3: Add start_date to tasks
+    cursor = await db.execute("PRAGMA table_info(tasks)")
+    task_cols = {row[1] for row in await cursor.fetchall()}
+    if "start_date" not in task_cols:
+        await db.execute("ALTER TABLE tasks ADD COLUMN start_date TEXT")
+        await db.commit()
+
 
 async def close_db():
     global _connection
@@ -105,6 +112,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT DEFAULT 'todo' CHECK(status IN ('backlog','todo','in_progress','done','cancelled')),
     priority TEXT DEFAULT 'low' CHECK(priority IN ('low','medium','high','urgent')),
     due_date TEXT,
+    start_date TEXT,
     completed_at TEXT,
     position REAL NOT NULL DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),

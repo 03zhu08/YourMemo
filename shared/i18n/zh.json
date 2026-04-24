@@ -13,6 +13,7 @@
     "status": { "backlog": "待办池", "todo": "待办", "in_progress": "进行中", "done": "已完成", "cancelled": "已取消" },
     "priority": { "low": "低", "medium": "中", "high": "高", "urgent": "紧急" },
     "dueDate": "截止日期",
+    "startDate": "开始日期",
     "noTasks": "暂无任务，创建一个开始吧！",
     "links": "链接",
     "addDescription": "+ 添加描述...",
@@ -24,7 +25,8 @@
     "description": "描述",
     "deadline": "截止日期",
     "create": "创建项目",
-    "empty": "暂无项目，创建你的第一个项目吧！"
+    "empty": "暂无项目，创建你的第一个项目吧！",
+    "confirmDelete": "删除项目「{name}」？所有任务将被永久删除。"
   },
   "dashboard": {
     "calendar": "日历",

@@ -48,6 +48,7 @@ async def create_task(body: TaskCreate):
         parent_id=body.parent_id,
         priority=body.priority,
         due_date=body.due_date,
+        start_date=body.start_date,
         links=body.links,
     )
 

@@ -45,14 +45,15 @@ async def create_task(project_id: str, title: str, **fields):
     position = row[0] if row else 1
 
     await db.execute(
-        """INSERT INTO tasks (id, project_id, title, description, parent_id, priority, due_date, position)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO tasks (id, project_id, title, description, parent_id, priority, due_date, start_date, position)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             tid, project_id, title,
             fields.get("description", ""),
             fields.get("parent_id"),
             fields.get("priority", "low"),
             fields.get("due_date"),
+            fields.get("start_date"),
             position,
         ),
     )

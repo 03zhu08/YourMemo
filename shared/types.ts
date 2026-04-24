@@ -36,6 +36,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   due_date: string | null;
+  start_date: string | null;
   completed_at: string | null;
   position: number;
   created_at: string;
@@ -49,6 +50,7 @@ export interface TaskCreatePayload {
   description?: string;
   priority?: TaskPriority;
   due_date?: string | null;
+  start_date?: string | null;
   links?: { label: string; url: string }[];
 }
 
@@ -58,6 +60,7 @@ export interface TaskUpdatePayload {
   status?: TaskStatus;
   priority?: TaskPriority;
   due_date?: string | null;
+  start_date?: string | null;
   links?: { label: string; url: string }[];
 }
 

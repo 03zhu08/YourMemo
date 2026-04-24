@@ -112,6 +112,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   deleteProject: async (id) => {
     await apiFetch(`/projects/${id}`, { method: 'DELETE' });
     await get().fetchProjects();
+    await get().fetchAllTasks();
     if (get().activeProjectId === id) set({ activeProjectId: null, tasks: [] });
   },
 

@@ -22,6 +22,7 @@ class TaskCreate(BaseModel):
     parent_id: Optional[str] = None
     priority: str = "low"
     due_date: Optional[str] = None
+    start_date: Optional[str] = None
     links: List[LinkCreate] = []
 
 
@@ -31,6 +32,7 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = None
     priority: Optional[str] = None
     due_date: Optional[str] = None
+    start_date: Optional[str] = None
     links: Optional[List[LinkCreate]] = None
 
 
@@ -43,6 +45,7 @@ class TaskOut(BaseModel):
     status: str
     priority: str
     due_date: Optional[str]
+    start_date: Optional[str] = None
     completed_at: Optional[str]
     position: float
     created_at: str

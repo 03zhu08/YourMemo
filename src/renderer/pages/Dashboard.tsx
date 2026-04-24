@@ -5,18 +5,9 @@ import { useAppStore } from '../stores/useAppStore';
 import TaskDrawer from '../components/TaskDrawer';
 import { cycleStatus, STATUS_COLORS } from '../utils/taskUtils';
 import type { Task } from '../../../shared/types';
-import { PRIORITY_COLORS } from '../../../shared/types';
 
 const WEEKDAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEEKDAYS_ZH = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-
-const STATUS_BADGE: Record<string, { label: string; bg: string }> = {
-  backlog: { label: 'Backlog', bg: '#6b7280' },
-  todo: { label: 'To Do', bg: '#e74c3c' },
-  in_progress: { label: 'Active', bg: '#f39c12' },
-  done: { label: 'Done', bg: '#27ae60' },
-  cancelled: { label: 'Cancel', bg: '#9ca3af' },
-};
 
 const TASK_BAR_COLORS = [
   'rgba(209,196,233,0.55)', 'rgba(255,236,179,0.55)', 'rgba(187,222,251,0.55)',
@@ -59,7 +50,7 @@ function getWeekRows(year: number, month: number): WeekRow[] {
 }
 
 const ROW_HEIGHT = 36;
-const TIMELINE_DAYS = 7;
+const RENDER_DAYS = 35;
 const LABEL_WIDTH = 192;
 
 function getMonday(d: Date): Date {
@@ -79,10 +70,16 @@ export default function Dashboard() {
   const [drawerTask, setDrawerTask] = useState<Task | null>(null);
   const [dashView, setDashView] = useState<'calendar' | 'timeline'>('calendar');
   const [popover, setPopover] = useState<{ dateKey: string; rect: DOMRect } | null>(null);
-  const [weekOffset, setWeekOffset] = useState(0);
   const [dayWidth, setDayWidth] = useState(100);
   const timelineContainerRef = useRef<HTMLDivElement>(null);
   const [dragState, setDragState] = useState<{ taskId: string; startX: number; origDate: string } | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [calSwipeX, setCalSwipeX] = useState(0);
+  const [calSnapping, setCalSnapping] = useState(false);
+  const calWidthRef = useRef(0);
+  const calGesture = useRef<{ startX: number; startY: number } | null>(null);
+  const pendingMonthDir = useRef<number>(0);
+  const [dayOffset, setDayOffset] = useState(0);
 
   useEffect(() => { fetchAllTasks(); }, []);
 
@@ -90,7 +87,7 @@ export default function Dashboard() {
     const el = timelineContainerRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      setDayWidth(Math.floor((entry.contentRect.width - LABEL_WIDTH) / 7));
+      setDayWidth(Math.max(40, Math.floor((entry.contentRect.width - LABEL_WIDTH) / 7)));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -110,7 +107,7 @@ export default function Dashboard() {
 
   const prevMonth = () => { if (viewMonth === 0) { setViewYear(viewYear - 1); setViewMonth(11); } else setViewMonth(viewMonth - 1); };
   const nextMonth = () => { if (viewMonth === 11) { setViewYear(viewYear + 1); setViewMonth(0); } else setViewMonth(viewMonth + 1); };
-  const goToday = () => { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); setWeekOffset(0); };
+  const goToday = () => { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); setDayOffset(0); };
 
   const monthLabel = new Date(viewYear, viewMonth).toLocaleDateString(isZh ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long' });
 
@@ -124,7 +121,7 @@ export default function Dashboard() {
 
   const handleStatusClick = useCallback(async (tk: Task, e: React.MouseEvent) => {
     e.stopPropagation();
-    const next = cycleStatus(tk.status);
+    const next = cycleStatus(tk.status) as import('../../../shared/types').TaskStatus;
     await updateTask(tk.id, { status: next });
     fetchAllTasks();
   }, [updateTask, fetchAllTasks]);
@@ -132,12 +129,8 @@ export default function Dashboard() {
   // Week-based timeline
   const timelineStart = useMemo(() => {
     const monday = getMonday(today);
-    return addDays(monday, weekOffset * 7);
-  }, [weekOffset]);
-
-  const timelineDates = useMemo(() => {
-    return Array.from({ length: TIMELINE_DAYS }, (_, i) => addDays(timelineStart, i));
-  }, [timelineStart]);
+    return addDays(monday, dayOffset);
+  }, [dayOffset]);
 
   const weekLabel = useMemo(() => {
     const end = addDays(timelineStart, 6);
@@ -171,6 +164,102 @@ export default function Dashboard() {
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [dragState, dayWidth, updateTask, fetchAllTasks]);
+
+  // Calendar swipe — smooth carousel
+  useEffect(() => {
+    const el = calendarRef.current;
+    if (!el || dashView !== 'calendar') return;
+    calWidthRef.current = el.getBoundingClientRect().width;
+    const ro = new ResizeObserver(([e]) => { calWidthRef.current = e.contentRect.width; });
+    ro.observe(el);
+
+    let wheelTimer: ReturnType<typeof setTimeout>;
+    const onWheel = (e: WheelEvent) => {
+      const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (Math.abs(dx) < 2) return;
+      e.preventDefault();
+      setCalSnapping(false);
+      setCalSwipeX(prev => {
+        const w = calWidthRef.current || 400;
+        return Math.max(-w, Math.min(w, prev - dx));
+      });
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => { setCalSnapping(true); snapCalendar(); }, 120);
+    };
+    const onDown = (e: MouseEvent) => { calGesture.current = { startX: e.clientX, startY: e.clientY }; };
+    const onMove = (e: MouseEvent) => {
+      if (!calGesture.current) return;
+      const dx = e.clientX - calGesture.current.startX;
+      const dy = e.clientY - calGesture.current.startY;
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        setCalSwipeX(Math.abs(dx) > Math.abs(dy) ? dx : -dy);
+      }
+    };
+    const onUp = () => {
+      calGesture.current = null;
+      setCalSnapping(true);
+      snapCalendar();
+    };
+
+    const snapCalendar = () => {
+      setCalSwipeX(prev => {
+        const w = calWidthRef.current || 400;
+        const threshold = w * 0.15;
+        if (prev > threshold) {
+          pendingMonthDir.current = -1;
+          setCalSnapping(true);
+          return w;
+        }
+        if (prev < -threshold) {
+          pendingMonthDir.current = 1;
+          setCalSnapping(true);
+          return -w;
+        }
+        pendingMonthDir.current = 0;
+        setCalSnapping(true);
+        return 0;
+      });
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    el.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      clearTimeout(wheelTimer);
+      ro.disconnect();
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [dashView, viewMonth, viewYear]);
+
+  // Timeline: compute render range (wider than viewport for native scroll)
+  const timelineRenderStart = useMemo(() => addDays(timelineStart, -14), [timelineStart]);
+  const timelineRenderDates = useMemo(() =>
+    Array.from({ length: RENDER_DAYS }, (_, i) => addDays(timelineRenderStart, i)),
+  [timelineRenderStart]);
+
+  // Scroll timeline to center on initial load
+  const timelineScrolledRef = useRef(false);
+  useEffect(() => {
+    if (dashView !== 'timeline' || timelineScrolledRef.current) return;
+    const el = timelineContainerRef.current;
+    if (!el || !dayWidth) return;
+    el.scrollLeft = 14 * dayWidth;
+    timelineScrolledRef.current = true;
+  }, [dashView, dayWidth]);
+
+  // When dayOffset changes (via buttons), re-center scroll
+  const prevDayOffsetRef = useRef(dayOffset);
+  useEffect(() => {
+    if (prevDayOffsetRef.current === dayOffset) return;
+    const el = timelineContainerRef.current;
+    if (el && dayWidth) el.scrollLeft = 14 * dayWidth;
+    prevDayOffsetRef.current = dayOffset;
+    timelineScrolledRef.current = true;
+  }, [dayOffset, dayWidth]);
 
   const groupedTasks = useMemo(() => {
     const groups: { projectId: string; projectName: string; projectColor: string; tasks: Task[] }[] = [];
@@ -221,8 +310,8 @@ export default function Dashboard() {
           </>
         ) : (
           <>
-            <button onClick={() => setWeekOffset(weekOffset - 1)} className="text-lg px-2 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>‹</button>
-            <button onClick={() => setWeekOffset(weekOffset + 1)} className="text-lg px-2 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>›</button>
+            <button onClick={() => setDayOffset(dayOffset - 7)} className="text-lg px-2 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>‹</button>
+            <button onClick={() => setDayOffset(dayOffset + 7)} className="text-lg px-2 cursor-pointer" style={{ color: 'var(--text-secondary)' }}>›</button>
             <span className="text-base font-semibold">{weekLabel}</span>
           </>
         )}
@@ -263,7 +352,17 @@ export default function Dashboard() {
 
       {dashView === 'calendar' ? (
         /* Calendar View */
-        <div className="flex-1 min-h-0 overflow-y-auto border rounded-lg relative" style={{ borderColor: 'var(--border)' }}>
+        <div ref={calendarRef} className="flex-1 min-h-0 overflow-auto border rounded-lg relative" style={{ borderColor: 'var(--border)' }}>
+          <div style={{ transform: `translateX(${calSwipeX}px)`, transition: calSnapping ? 'transform 250ms ease-out' : 'none' }}
+            onTransitionEnd={() => {
+              setCalSnapping(false);
+              const dir = pendingMonthDir.current;
+              if (dir !== 0) {
+                pendingMonthDir.current = 0;
+                if (dir > 0) nextMonth(); else prevMonth();
+                setCalSwipeX(0);
+              }
+            }}>
           <div className="grid grid-cols-7 sticky top-0 z-10" style={{ background: 'var(--bg-secondary)' }}>
             {weekdays.map((d) => (
               <div key={d} className="text-xs font-medium py-2 px-2 border-b border-r" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>{d}</div>
@@ -272,24 +371,32 @@ export default function Dashboard() {
           {weekRows.map((week, wi) => {
             const weekEnd = addDays(week.startDate, 6);
             const weekBars = allTasks.filter(tk => {
-              if (!tk.due_date) return false;
-              const d = parseDate(tk.due_date.slice(0, 10));
-              return d >= week.startDate && d <= weekEnd && d.getMonth() === viewMonth && d.getFullYear() === viewYear;
+              const s = tk.start_date ? parseDate(tk.start_date.slice(0, 10)) : tk.due_date ? parseDate(tk.due_date.slice(0, 10)) : null;
+              const e = tk.due_date ? parseDate(tk.due_date.slice(0, 10)) : s;
+              if (!s || !e) return false;
+              return e >= week.startDate && s <= weekEnd;
             }).map((tk, idx) => {
-              const d = parseDate(tk.due_date!.slice(0, 10));
-              const dow = d.getDay();
-              return { task: tk, col: dow === 0 ? 6 : dow - 1, colorIndex: idx % TASK_BAR_COLORS.length };
+              const s = tk.start_date ? parseDate(tk.start_date.slice(0, 10)) : tk.due_date ? parseDate(tk.due_date!.slice(0, 10)) : parseDate(tk.created_at.slice(0, 10));
+              const e = tk.due_date ? parseDate(tk.due_date.slice(0, 10)) : s;
+              const clampedStart = s < week.startDate ? week.startDate : s;
+              const clampedEnd = e > weekEnd ? weekEnd : e;
+              const startDow = clampedStart.getDay();
+              const endDow = clampedEnd.getDay();
+              const startCol = startDow === 0 ? 6 : startDow - 1;
+              const endCol = endDow === 0 ? 6 : endDow - 1;
+              const span = endCol - startCol + 1;
+              return { task: tk, col: startCol, span: Math.max(1, span), colorIndex: idx % TASK_BAR_COLORS.length };
             });
-            const MAX_VIS = 3;
+            const maxRow = weekBars.length;
             return (
-              <div key={wi} className="grid grid-cols-7 relative" style={{ minHeight: 110 }}>
+              <div key={wi} className="grid grid-cols-7 relative" style={{ minHeight: 90 }}>
                 {week.days.map((day, col) => {
                   const dateKey = day ? `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
                   const isToday = dateKey === todayKey;
                   return (
                     <div key={col} onClick={(e) => day !== null && handleCellClick(dateKey, e)}
                       className="border-b border-r px-1.5 pt-1 pb-0 cursor-pointer"
-                      style={{ borderColor: 'var(--border)', background: day === null ? 'var(--bg-primary)' : 'var(--bg-secondary)' }}>
+                      style={{ borderColor: 'var(--border)', background: day === null ? 'var(--bg-primary)' : 'var(--bg-secondary)', minHeight: 24 + maxRow * 22 }}>
                       {day !== null && (
                         <span className={`text-xs inline-flex items-center justify-center ${isToday ? 'rounded-full text-white font-bold' : ''}`}
                           style={isToday ? { background: 'var(--accent)', width: 22, height: 22 } : { color: 'var(--text-secondary)' }}>{day}</span>
@@ -297,20 +404,14 @@ export default function Dashboard() {
                     </div>
                   );
                 })}
-                <div className="absolute inset-0 grid grid-cols-7 pointer-events-none" style={{ paddingTop: 26 }}>
-                  {weekBars.slice(0, MAX_VIS).map((bar, bi) => (
+                <div className="absolute inset-0 grid grid-cols-7 pointer-events-none" style={{ paddingTop: 24 }}>
+                  {weekBars.map((bar, bi) => (
                     <div key={bar.task.id} onClick={() => setDrawerTask(bar.task)}
-                      className="pointer-events-auto cursor-pointer rounded px-1.5 py-0.5 mb-0.5 mx-0.5 truncate flex items-center gap-1.5 hover:opacity-80"
-                      style={{ gridColumn: `${bar.col + 1} / span 1`, gridRow: bi + 1, background: barColors[bar.colorIndex], minHeight: 24, borderLeft: `3px solid ${projectMap[bar.task.project_id]?.color || 'var(--accent)'}` }}>
-                      <span className="text-xs font-medium truncate" style={{ color: 'var(--text-primary)' }}>{bar.task.title}</span>
-                      <span className="text-[10px] px-1 py-px rounded shrink-0 text-white" style={{ background: STATUS_BADGE[bar.task.status]?.bg || '#9ca3af' }}>
-                        {STATUS_BADGE[bar.task.status]?.label || bar.task.status}
-                      </span>
+                      className="pointer-events-auto cursor-pointer rounded px-1 truncate flex items-center gap-1 hover:opacity-80"
+                      style={{ gridColumn: `${bar.col + 1} / span ${bar.span}`, gridRow: bi + 1, background: barColors[bar.colorIndex], height: 20, marginBottom: 1, marginLeft: 2, marginRight: 2, borderLeft: `3px solid ${projectMap[bar.task.project_id]?.color || 'var(--accent)'}` }}>
+                      <span className="text-[11px] font-medium truncate" style={{ color: 'var(--text-primary)' }}>{bar.task.title}</span>
                     </div>
                   ))}
-                  {weekBars.length > MAX_VIS && (
-                    <div className="text-[10px] px-2 col-span-1" style={{ gridRow: MAX_VIS + 1, gridColumn: '1', color: 'var(--text-secondary)' }}>+{weekBars.length - MAX_VIS} more</div>
-                  )}
                 </div>
               </div>
             );
@@ -351,43 +452,26 @@ export default function Dashboard() {
               </>
             );
           })()}
+          </div>
         </div>
       ) : (
-        /* Timeline / Gantt View — Week */
-        <div ref={timelineContainerRef} className="flex-1 min-h-0 flex border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border)' }}>
-          {/* Left: labels */}
-          <div className="shrink-0 border-r overflow-y-auto" style={{ width: LABEL_WIDTH, borderColor: 'var(--border)', background: 'var(--bg-secondary)' }}>
-            <div className="h-8 border-b px-3 flex items-center text-xs font-medium" style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}>
-              {isZh ? '项目 / 任务' : 'Project / Task'}
-            </div>
-            {groupedTasks.map(group => (
-              <div key={group.projectId}>
-                <div className="flex items-center gap-1.5 px-3 text-xs font-semibold" style={{ height: ROW_HEIGHT, color: 'var(--text-primary)' }}>
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ background: group.projectColor }} />
-                  <span className="truncate">{group.projectName}</span>
-                </div>
-                {group.tasks.map(tk => (
-                  <div key={tk.id} className="px-3 pl-6 text-xs truncate cursor-pointer hover:opacity-80"
-                    style={{ height: ROW_HEIGHT, lineHeight: `${ROW_HEIGHT}px`, color: 'var(--text-secondary)' }}
-                    onClick={() => setDrawerTask(tk)}>
-                    {tk.title}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          {/* Right: bars */}
-          <div className="flex-1 overflow-y-auto">
+        /* Timeline / Gantt View — native scroll */
+        <div ref={timelineContainerRef} className="flex-1 min-h-0 border rounded-lg overflow-auto" style={{ borderColor: 'var(--border)' }}>
+          <div style={{ width: LABEL_WIDTH + RENDER_DAYS * dayWidth, minWidth: '100%' }}>
             {/* Date header */}
-            <div className="flex sticky top-0 z-10" style={{ background: 'var(--bg-secondary)', height: 32 }}>
-              {timelineDates.map((d, i) => {
+            <div className="flex sticky top-0 z-20" style={{ height: 32 }}>
+              <div className="shrink-0 sticky left-0 z-30 border-b border-r px-3 flex items-center text-xs font-medium"
+                style={{ width: LABEL_WIDTH, borderColor: 'var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                {isZh ? '项目 / 任务' : 'Project / Task'}
+              </div>
+              {timelineRenderDates.map((d, i) => {
                 const key = toDateKey(d);
                 const isT = key === todayKey;
-                const dayName = weekdays[i];
+                const dow = d.getDay();
+                const dayName = weekdays[dow === 0 ? 6 : dow - 1];
                 return (
-                  <div key={i} className="flex-1 border-b border-r flex flex-col items-center justify-center text-[10px]"
-                    style={{ borderColor: 'var(--border)', color: isT ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: isT ? 700 : 400 }}>
+                  <div key={i} className="border-b border-r flex flex-col items-center justify-center text-[10px] shrink-0"
+                    style={{ width: dayWidth, borderColor: 'var(--border)', background: 'var(--bg-secondary)', color: isT ? 'var(--accent)' : 'var(--text-secondary)', fontWeight: isT ? 700 : 400 }}>
                     <span className="text-[9px] leading-none">{dayName}</span>
                     <span>{d.getDate()}</span>
                   </div>
@@ -398,30 +482,42 @@ export default function Dashboard() {
             {/* Rows */}
             {groupedTasks.map(group => (
               <div key={group.projectId}>
+                {/* Project header row */}
                 <div className="flex" style={{ height: ROW_HEIGHT }}>
-                  {timelineDates.map((_, i) => (
-                    <div key={i} className="flex-1 border-b border-r" style={{ borderColor: 'var(--border)', background: 'var(--bg-primary)', opacity: 0.5 }} />
+                  <div className="sticky left-0 z-10 shrink-0 flex items-center gap-1.5 px-3 text-xs font-semibold border-b border-r"
+                    style={{ width: LABEL_WIDTH, background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: group.projectColor }} />
+                    <span className="truncate">{group.projectName}</span>
+                  </div>
+                  {timelineRenderDates.map((_, i) => (
+                    <div key={i} className="shrink-0 border-b border-r" style={{ width: dayWidth, borderColor: 'var(--border)', background: 'var(--bg-primary)', opacity: 0.5 }} />
                   ))}
                 </div>
+                {/* Task rows */}
                 {group.tasks.map(tk => {
-                  const created = parseDate(tk.created_at.slice(0, 10));
-                  const end = tk.due_date ? parseDate(tk.due_date.slice(0, 10)) : created;
-                  const barStart = created < timelineStart ? timelineStart : created;
+                  const start = tk.start_date ? parseDate(tk.start_date.slice(0, 10)) : parseDate(tk.created_at.slice(0, 10));
+                  const end = tk.due_date ? parseDate(tk.due_date.slice(0, 10)) : start;
+                  const barStart = start < timelineRenderStart ? timelineRenderStart : start;
                   const barEndDate = end;
-                  const offsetDays = diffDays(timelineStart, barStart);
+                  const offsetDays = diffDays(timelineRenderStart, barStart);
                   const spanDays = Math.max(1, diffDays(barStart, barEndDate) + 1);
-                  const left = offsetDays * dayWidth;
-                  const width = spanDays * dayWidth - 4;
-                  const visible = offsetDays < TIMELINE_DAYS && offsetDays + spanDays > 0;
+                  const barLeft = LABEL_WIDTH + offsetDays * dayWidth;
+                  const barWidth = spanDays * dayWidth - 4;
+                  const visible = offsetDays < RENDER_DAYS && offsetDays + spanDays > 0;
                   return (
                     <div key={tk.id} className="relative flex" style={{ height: ROW_HEIGHT }}>
-                      {timelineDates.map((_, i) => (
-                        <div key={i} className="flex-1 border-b border-r" style={{ borderColor: 'var(--border)' }} />
+                      <div className="sticky left-0 z-10 shrink-0 px-3 pl-6 text-xs truncate cursor-pointer hover:opacity-80 border-b border-r flex items-center"
+                        style={{ width: LABEL_WIDTH, background: 'var(--bg-secondary)', borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
+                        onClick={() => setDrawerTask(tk)}>
+                        {tk.title}
+                      </div>
+                      {timelineRenderDates.map((_, i) => (
+                        <div key={i} className="shrink-0 border-b border-r" style={{ width: dayWidth, borderColor: 'var(--border)' }} />
                       ))}
                       {visible && (
                         <div className="absolute top-1 rounded cursor-pointer hover:opacity-80 flex items-center px-2 truncate text-[11px]"
                           onClick={() => setDrawerTask(tk)}
-                          style={{ left: Math.max(0, left), width: Math.min(width, TIMELINE_DAYS * dayWidth - left), height: ROW_HEIGHT - 8, background: group.projectColor + '33', borderLeft: `3px solid ${group.projectColor}`, color: 'var(--text-primary)' }}>
+                          style={{ left: Math.max(LABEL_WIDTH, barLeft), width: Math.min(barWidth, LABEL_WIDTH + RENDER_DAYS * dayWidth - barLeft), height: ROW_HEIGHT - 8, background: group.projectColor + '33', borderLeft: `3px solid ${group.projectColor}`, color: 'var(--text-primary)' }}>
                           <span className="w-2 h-2 rounded-full shrink-0 cursor-pointer mr-1.5"
                             style={{ background: STATUS_COLORS[tk.status] || 'var(--text-secondary)' }}
                             onClick={(e) => handleStatusClick(tk, e)} />
